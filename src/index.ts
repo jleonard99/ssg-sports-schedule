@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-import 'dotenv/config';
 import { Command } from 'commander';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
+import dotenv from 'dotenv';
 import envPaths from 'env-paths';
 
 // ----- Package metadata -----
@@ -12,6 +13,26 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const require = createRequire(import.meta.url);
 const pkg = require(path.join(__dirname, '../package.json'));
+
+// ----- Env loading -----
+function loadEnv(): void {
+  // process.env first (already set)
+  if (process.env.SPORTSDATA_API_KEY) return;
+
+  // Then .env in cwd
+  const localEnv = path.join(process.cwd(), '.env');
+  if (fs.existsSync(localEnv)) {
+    dotenv.config({ path: localEnv });
+    if (process.env.SPORTSDATA_API_KEY) return;
+  }
+
+  // Finally ~/.env
+  const homeEnv = path.join(os.homedir(), '.env');
+  if (fs.existsSync(homeEnv)) {
+    dotenv.config({ path: homeEnv });
+  }
+}
+loadEnv();
 
 // ----- Config -----
 const API_KEY = process.env.SPORTSDATA_API_KEY;
@@ -38,7 +59,7 @@ type Game = {
 
 type NFLTeam = { Key: string; FullName: string };
 
-// ----- Helpers -----
+// ----- Cache helpers -----
 function ensureCacheDir() {
   if (!fs.existsSync(CACHE_DIR)) {
     fs.mkdirSync(CACHE_DIR, { recursive: true });
@@ -72,6 +93,7 @@ async function fetchWithCache(url: string, cacheFile: string) {
   return data;
 }
 
+// ----- Fetchers -----
 async function fetchNFLTeams(): Promise<Record<string, string>> {
   const teams: NFLTeam[] = await fetchWithCache(NFL_TEAMS_URL, 'nfl_teams.json');
   return teams.reduce<Record<string, string>>((map, t) => {
@@ -99,6 +121,7 @@ async function fetchGames(
   }));
 }
 
+// ----- Utils -----
 function computeTargetDate(daysOffset: number): string {
   const today = new Date();
   today.setDate(today.getDate() + daysOffset);
@@ -139,6 +162,7 @@ program
 program.parse(process.argv);
 const opts = program.opts();
 
+// ----- Main -----
 async function main() {
   // Handle cache clearing
   if (opts.clearCache) {
@@ -158,7 +182,7 @@ async function main() {
   }
 
   try {
-    if (!API_KEY) throw new Error('Missing API key in .env');
+    if (!API_KEY) throw new Error('Missing SPORTSDATA_API_KEY (set env var or use .env)');
 
     const nflTeams = await fetchNFLTeams();
 

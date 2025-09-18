@@ -10,6 +10,9 @@ pnpm-debug.log*
 .env.local
 .env.*.local
 
+# Cache (API responses)
+cache/
+
 # Logs
 logs
 *.log
