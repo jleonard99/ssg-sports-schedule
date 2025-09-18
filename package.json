@@ -1,6 +1,6 @@
 {
   "name": "games",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "CLI to fetch and display NFL and CFB games from SportsData.io",
   "type": "module",
   "bin": {
